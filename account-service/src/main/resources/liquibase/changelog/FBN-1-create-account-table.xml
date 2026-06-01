@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <changeSet id="FBN-1-create-fjordbanken-schema" author="talasm">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'fjordbanken';
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            CREATE SCHEMA fjordbanken;
+        </sql>
+    </changeSet>
+
+    <changeSet id="FBN-1-create-account-table" author="talasm">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="accounts" schemaName="fjordbanken"/>
+            </not>
+        </preConditions>
+        <createTable tableName="accounts" schemaName="fjordbanken">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_name" type="VARCHAR(255)"/>
+            <column name="account_number" type="VARCHAR(34)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="FBN-1-create-currency-balances-table" author="talasm">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="currency_balances" schemaName="fjordbanken"/>
+            </not>
+        </preConditions>
+        <createTable tableName="currency_balances" schemaName="fjordbanken">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="account_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_account_balance"
+                             referencedTableName="accounts"
+                             referencedColumnNames="id"
+                             referencedTableSchemaName="fjordbanken"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="balance" type="DECIMAL(18,2)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
