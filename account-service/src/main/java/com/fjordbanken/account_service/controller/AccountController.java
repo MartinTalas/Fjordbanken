@@ -34,7 +34,7 @@ public class AccountController {
 
     @GetMapping
     public ResponseEntity<List<Account>> getAllAccounts() {
-        List<Account> accounts = accountService.getAllAccounts();
+        List<Account> accounts = accountService.getAllActiveAccounts();
 
         if (accounts.isEmpty()) {
             return ResponseEntity.noContent().build();

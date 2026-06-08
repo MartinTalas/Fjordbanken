@@ -1,6 +1,7 @@
 package com.fjordbanken.account_service.service;
 
 import com.fjordbanken.account_service.dto.Account;
+import com.fjordbanken.account_service.enums.AccountStatus;
 import com.fjordbanken.account_service.model.AccountEntity;
 import org.springframework.stereotype.Component;
 
@@ -8,6 +9,7 @@ import java.util.Optional;
 
 @Component
 public class AccountMapperIMpl implements AccountMapper{
+
     @Override
     public AccountEntity toEntity(Account dto) {
         if (dto == null) {
@@ -18,6 +20,7 @@ public class AccountMapperIMpl implements AccountMapper{
                 .id(dto.getId())
                 .customerName(dto.getCustomerName())
                 .accountNumber(dto.getAccountNumber())
+                .status(dto.getStatus() != null ? AccountStatus.valueOf(dto.getStatus()) : AccountStatus.PENDING)
                 .build();
     }
 
@@ -32,6 +35,7 @@ public class AccountMapperIMpl implements AccountMapper{
                 .customerName(entity.getCustomerName())
                 .accountNumber(entity.getAccountNumber())
                 .countryCode(getCountryCode(entity.getAccountNumber()))
+                .status(entity.getStatus().name())
                 .build();
     }
 

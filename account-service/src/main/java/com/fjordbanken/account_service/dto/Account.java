@@ -16,4 +16,5 @@ public class Account {
     private String customerName;
     private String accountNumber;
     private String countryCode;
+    private String status;
 }
