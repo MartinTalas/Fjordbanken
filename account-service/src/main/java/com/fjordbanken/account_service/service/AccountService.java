@@ -68,7 +68,7 @@ public class AccountService {
         AccountEntity existingEntity = accountRepository.findByIdAndStatusNot(id, AccountStatus.CLOSED)
                 .orElseThrow(() -> new ResourceNotFoundException("Account is inactive or missing with ID: " + id));
 
-        existingEntity.setCustomerName(accountDto.getCustomerName());
+        accountMapper.updateEntityFromDto(accountDto, existingEntity);
         AccountEntity updatedEntity = accountRepository.save(existingEntity);
         return accountMapper.toDto(updatedEntity);
     }

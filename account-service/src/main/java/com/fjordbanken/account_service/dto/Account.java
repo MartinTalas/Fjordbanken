@@ -12,7 +12,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Account {
     private UUID id;
-    @NotBlank(message = "Customer name cannot be blank")
     private String customerName;
     private String accountNumber;
     private String countryCode;

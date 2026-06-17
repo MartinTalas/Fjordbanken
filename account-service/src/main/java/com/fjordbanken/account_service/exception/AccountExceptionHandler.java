@@ -37,4 +37,17 @@ public class AccountExceptionHandler {
         problemDetail.setTitle("Resource Not Found");
         return problemDetail;
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalState(IllegalStateException ise) {
+        log.warn("Conflict occurred: {}", ise.getMessage());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                ise.getMessage()
+        );
+        problemDetail.setTitle("Conflict");
+        problemDetail.setProperty("timestamp", Instant.now());
+        return problemDetail;
+    }
 }
