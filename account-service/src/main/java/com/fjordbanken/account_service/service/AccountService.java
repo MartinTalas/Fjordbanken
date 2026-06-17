@@ -2,6 +2,7 @@ package com.fjordbanken.account_service.service;
 
 import com.fjordbanken.account_service.dto.Account;
 import com.fjordbanken.account_service.enums.AccountPrefix;
+import com.fjordbanken.account_service.enums.AccountStatus;
 import com.fjordbanken.account_service.exception.ResourceNotFoundException;
 import com.fjordbanken.account_service.model.AccountEntity;
 import com.fjordbanken.account_service.repository.AccountRepository;
@@ -26,11 +27,18 @@ public class AccountService {
 
     @Transactional
     public Account createAccount(Account accountDto) {
+        if (accountRepository.existsByCustomerName(accountDto.getCustomerName())) {
+            throw new IllegalStateException("Customer already has an active account.");
+        }
         log.info("Creating a new banking account for customer: {}", accountDto.getCustomerName());
 
         AccountPrefix prefixEnum = AccountPrefix.fromString(accountDto.getCountryCode());
+        String generatedAccountNumber;
+        do {
+            generatedAccountNumber = generateDynamicAccountNumber(prefixEnum);
+        } while (accountRepository.existsByAccountNumber(generatedAccountNumber));
         AccountEntity entity = accountMapper.toEntity(accountDto);
-        entity.setAccountNumber(generateDynamicAccountNumber(prefixEnum));
+        entity.setAccountNumber(generatedAccountNumber);
         AccountEntity savedEntity = accountRepository.save(entity);
         return accountMapper.toDto(savedEntity);
     }
@@ -39,16 +47,16 @@ public class AccountService {
     public Account getAccountById(UUID id) {
         log.info("Fetching account details for ID: {}", id);
 
-        return accountRepository.findById(id)
+        return accountRepository.findByIdAndStatusNot(id, AccountStatus.CLOSED)
                 .map(accountMapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found or is inactive with ID: " + id));
     }
 
     @Transactional(readOnly = true)
-    public List<Account> getAllAccounts() {
-        log.info("Fetching all registered accounts");
+    public List<Account> getAllActiveAccounts() {
+        log.info("Fetching all active accounts");
 
-        return accountRepository.findAll().stream()
+        return accountRepository.findAllByStatus(AccountStatus.ACTIVE).stream()
                 .map(accountMapper::toDto)
                 .toList();
     }
@@ -57,11 +65,11 @@ public class AccountService {
     public Account updateAccount(UUID id, Account accountDto) {
         log.info("Executing account update sequence for ID: {}", id);
 
-        AccountEntity existingEntity = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + id));
-        /* Usually, we can NOT allow changing the accountNumber or countryCode after creation in a bank system,
-        so we only update mutable fields like the name here. */
-        existingEntity.setCustomerName(accountDto.getCustomerName());AccountEntity updatedEntity = accountRepository.save(existingEntity);
+        AccountEntity existingEntity = accountRepository.findByIdAndStatusNot(id, AccountStatus.CLOSED)
+                .orElseThrow(() -> new ResourceNotFoundException("Account is inactive or missing with ID: " + id));
+
+        accountMapper.updateEntityFromDto(accountDto, existingEntity);
+        AccountEntity updatedEntity = accountRepository.save(existingEntity);
         return accountMapper.toDto(updatedEntity);
     }
 
@@ -69,11 +77,27 @@ public class AccountService {
     public void deleteAccount(UUID id) {
         log.info("Executing account deletion sequence for ID: {}", id);
 
-        if (!accountRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Account not found with ID: " + id);
+        AccountEntity accountEntity = accountRepository.findByIdAndStatusNot(id, AccountStatus.CLOSED)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found or already closed"));
+
+        accountEntity.setStatus(AccountStatus.CLOSED);
+        accountRepository.save(accountEntity);
+    }
+
+    @Transactional
+    public Account reactivateAccount(UUID id) {
+        log.info("Attempting to reactivate account: {}", id);
+
+        AccountEntity accountEntity = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with ID: " + id));
+
+        if (accountEntity.getStatus() != AccountStatus.CLOSED) {
+            throw new IllegalStateException("Account is not closed, cannot reactivate.");
         }
 
-        accountRepository.deleteById(id);
+        accountEntity.setStatus(AccountStatus.ACTIVE);
+        log.info("Account {} successfully reactivated", id);
+        return accountMapper.toDto(accountRepository.save(accountEntity));
     }
 
     private String generateDynamicAccountNumber(AccountPrefix prefix) {

@@ -6,5 +6,6 @@
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
 
     <include file="classpath:liquibase/changelog/FBN-1-create-account-table.xml"/>
+    <include file="classpath:liquibase/changelog/FBN-4-extend-account-table.xml"/>
 
 </databaseChangeLog>
